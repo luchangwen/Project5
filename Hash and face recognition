@@ -1,0 +1,65 @@
+def check_face(f_id: number, save_hash: str):
+    global now_hash
+    now_hash = make_hash(f_id)
+    return now_hash == save_hash
+def play_sound(f_id2: number):
+    if f_id2 == 0:
+        music.play(music.built_in_playable_melody(Melodies.POWER_UP),
+            music.PlaybackMode.UNTIL_DONE)
+    elif f_id2 == 1:
+        music.play(music.built_in_playable_melody(Melodies.JUMP_UP),
+            music.PlaybackMode.UNTIL_DONE)
+    elif f_id2 == 2:
+        music.play(music.built_in_playable_melody(Melodies.JUMP_DOWN),
+            music.PlaybackMode.UNTIL_DONE)
+def make_hash(id_num: number):
+    global result, text
+    result = (id_num * 11111 + 22222) % 10000
+    text = "" + str(result)
+    while len(text) < 4:
+        text = "0" + text
+    return text
+f = 0
+text = ""
+result = 0
+now_hash = ""
+k210_models.initialization()
+music.set_built_in_speaker_enabled(True)
+basic.clear_screen()
+# 人脸数据存储
+face_data = ["", "", ""]
+current_face = -1
+first_time = True
+basic.show_string("GO")
+basic.clear_screen()
+
+def on_forever():
+    global f, current_face, first_time
+    f = k210_models.face_reg()
+    if f >= 0 and f <= 2:
+        current_face = f
+        basic.show_number(f)
+        if first_time:
+            h = make_hash(f)
+            face_data[f] = h
+            basic.show_icon(IconNames.YES)
+            play_sound(f)
+            serial.write_string("Save face " + ("" + str(f)) + " hash: " + h + "\r\n")
+            first_time = False
+        elif face_data[f] != "":
+            if check_face(f, face_data[f]):
+                basic.show_icon(IconNames.YES)
+                play_sound(f)
+                serial.write_string("OK face " + ("" + str(f)) + "\r\n")
+            else:
+                basic.show_icon(IconNames.NO)
+                serial.write_string("Fail face " + ("" + str(f)) + "\r\n")
+        else:
+            basic.show_icon(IconNames.NO)
+            serial.write_string("No face " + ("" + str(f)) + "\r\n")
+        basic.pause(2000)
+        basic.clear_screen()
+    else:
+        first_time = True
+        current_face = -1
+basic.forever(on_forever)
